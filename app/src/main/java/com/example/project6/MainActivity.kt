@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -17,7 +18,7 @@ import okhttp3.Headers
 
 class MainActivity : AppCompatActivity() {
 
-    data class Dish(val imageUrl: String, val dishName: String)
+    data class Dish(val imageUrl: String, val dishName: String, val dishArea: String)
 
     private lateinit var rvDish: RecyclerView
 
@@ -80,12 +81,9 @@ class MainActivity : AppCompatActivity() {
                     val dishObject = dishImageArray.getJSONObject(i)
                     val strMealThumb = dishObject.getString("strMealThumb")
                     val strMeal = dishObject.getString("strMeal")
-                    dishes.add(Dish(strMealThumb, strMeal))
+                    val idMeal = dishObject.getString("idMeal")
+                    fetchDishArea(idMeal, strMealThumb, strMeal, dishes)
                 }
-                val adapter = DishAdapter(dishes)
-                rvDish.adapter = adapter
-                rvDish.layoutManager = LinearLayoutManager(this@MainActivity)
-                rvDish.addItemDecoration(DividerItemDecoration(this@MainActivity, LinearLayoutManager.VERTICAL))
             }
 
             override fun onFailure(
@@ -97,5 +95,32 @@ class MainActivity : AppCompatActivity() {
                 Log.d("Dish Error", errorResponse)
             }
         }]
+    }
+
+    private fun fetchDishArea(idMeal: String, imageUrl: String, dishName: String, dishes: MutableList<Dish>) {
+        val client = AsyncHttpClient()
+        client.get("https://www.themealdb.com/api/json/v1/1/lookup.php?i=$idMeal", object : JsonHttpResponseHandler() {
+            override fun onSuccess(statusCode: Int, headers: Headers, json: JsonHttpResponseHandler.JSON) {
+                val dishDetailsArray = json.jsonObject.getJSONArray("meals")
+                if (dishDetailsArray.length() > 0) {
+                    val dishObject = dishDetailsArray.getJSONObject(0)
+                    val dishArea = dishObject.getString("strArea")
+                    dishes.add(Dish(imageUrl, dishName, dishArea))
+                    val adapter = DishAdapter(dishes)
+                    rvDish.adapter = adapter
+                    rvDish.layoutManager = LinearLayoutManager(this@MainActivity)
+                    rvDish.addItemDecoration(DividerItemDecoration(this@MainActivity, LinearLayoutManager.VERTICAL))
+                }
+            }
+
+            override fun onFailure(
+                statusCode: Int,
+                headers: Headers?,
+                errorResponse: String,
+                throwable: Throwable?
+            ) {
+                Log.d("Dish Area Error", errorResponse)
+            }
+        })
     }
 }
